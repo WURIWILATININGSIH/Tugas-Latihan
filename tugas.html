@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Aplikasi Daftar Tugas</title>
+    <style>
+        /* Reset margin dan padding */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        /* Styling untuk body */
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background-color: #f4f4f4;
+            min-height: 100vh;
+        }
+
+        /* Wrapper utama */
+        .todo-app {
+            width: 90%;
+            max-width: 600px;
+            margin: 20px;
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+
+        h1 {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        /* Formulir tambah tugas */
+        .todo-form {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .todo-form input,
+        .todo-form select,
+        .todo-form button {
+            padding: 10px;
+            font-size: 16px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+
+        .todo-form button {
+            background-color: #333;
+            color: #fff;
+            cursor: pointer;
+        }
+
+        /* Daftar Tugas */
+        .todo-list {
+            list-style: none;
+            margin-top: 20px;
+        }
+
+        .todo-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px;
+            border-bottom: 1px solid #ddd;
+        }
+
+        .todo-item.completed {
+            text-decoration: line-through;
+            color: gray;
+        }
+
+        .todo-item .task-details {
+            flex: 1;
+            margin-right: 10px;
+        }
+
+        .todo-item .task-actions button {
+            margin-left: 5px;
+            padding: 5px 10px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        /* Filter */
+        .filters {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="todo-app">
+        <h1>Daftar Tugas</h1>
+
+        <!-- Formulir Tambah Tugas -->
+        <div class="todo-form">
+            <input type="text" id="taskTitle" placeholder="Judul Tugas" required>
+            <input type="date" id="taskDueDate">
+            <select id="taskPriority">
+                <option value="low">Rendah</option>
+                <option value="medium">Sedang</option>
+                <option value="high">Tinggi</option>
+            </select>
+            <button onclick="addTask()">Tambah Tugas</button>
+        </div>
+
+        <!-- Filter Tugas -->
+        <div class="filters">
+            <button onclick="filterTasks('all')">Semua</button>
+            <button onclick="filterTasks('active')">Aktif</button>
+            <button onclick="filterTasks('completed')">Selesai</button>
+            <button onclick="sortTasks()">Urutkan Berdasarkan Tanggal</button>
+        </div>
+
+        <!-- Daftar Tugas -->
+        <ul class="todo-list" id="todoList"></ul>
+    </div>
+
+    <script>
+        let tasks = JSON.parse(localStorage.getItem('tasks')) || [];
+
+        function renderTasks(filter = 'all') {
+            const todoList = document.getElementById('todoList');
+            todoList.innerHTML = '';
+
+            let filteredTasks = tasks;
+            if (filter === 'active') {
+                filteredTasks = tasks.filter(task => !task.completed);
+            } else if (filter === 'completed') {
+                filteredTasks = tasks.filter(task => task.completed);
+            }
+
+            filteredTasks.forEach((task, index) => {
+                const taskItem = document.createElement('li');
+                taskItem.className = `todo-item ${task.completed ? 'completed' : ''}`;
+                taskItem.innerHTML = `
+                    <div class="task-details">
+                        <strong>${task.title}</strong> (${task.priority})<br>
+                        ${task.dueDate ? 'Tenggat: ' + task.dueDate : 'Tidak ada tenggat'}
+                    </div>
+                    <div class="task-actions">
+                        <button onclick="toggleTask(${index})">${task.completed ? 'Buka' : 'Selesai'}</button>
+                        <button onclick="editTask(${index})">Edit</button>
+                        <button onclick="deleteTask(${index})">Hapus</button>
+                    </div>
+                `;
+                todoList.appendChild(taskItem);
+            });
+        }
+
+        function addTask() {
+            const title = document.getElementById('taskTitle').value;
+            const dueDate = document.getElementById('taskDueDate').value;
+            const priority = document.getElementById('taskPriority').value;
+
+            if (!title) {
+                alert('Judul tugas tidak boleh kosong');
+                return;
+            }
+
+            tasks.push({
+                title,
+                dueDate,
+                priority,
+                completed: false
+            });
+
+            saveTasks();
+            renderTasks();
+            document.getElementById('taskTitle').value = '';
+            document.getElementById('taskDueDate').value = '';
+        }
+
+        function toggleTask(index) {
+            tasks[index].completed = !tasks[index].completed;
+            saveTasks();
+            renderTasks();
+        }
+
+        function editTask(index) {
+            const newTitle = prompt('Edit Judul Tugas:', tasks[index].title);
+            if (newTitle) {
+                tasks[index].title = newTitle;
+                saveTasks();
+                renderTasks();
+            }
+        }
+
+        function deleteTask(index) {
+            tasks.splice(index, 1);
+            saveTasks();
+            renderTasks();
+        }
+
+        function filterTasks(filter) {
+            renderTasks(filter);
+        }
+
+        function sortTasks() {
+            tasks.sort((a, b) => new Date(a.dueDate) - new Date(b.dueDate));
+            saveTasks();
+            renderTasks();
+        }
+
+        function saveTasks() {
+            localStorage.setItem('tasks', JSON.stringify(tasks));
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            renderTasks();
+        });
+    </script>
+</body>
+</html>
